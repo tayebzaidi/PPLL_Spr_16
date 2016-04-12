@@ -73,7 +73,7 @@ class VentanaProductorConsumidor(tk.Frame):
             self.queue.put([current_process().name, 'produciendo', almacen])
             time.sleep(random.random())
             control.acquire()
-            while len(almacen) == K:
+            while len(almacen) == 0:
                 #print current_process().name, "esperando..."
                 self.queue.put([current_process().name, 'esperando', almacen])
                 control.wait()

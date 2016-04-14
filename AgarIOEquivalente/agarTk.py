@@ -36,6 +36,8 @@ class VentanaAgar(tk.Frame):
     def iniciarJuego(self):
         self.conn = Client(address=('127.0.0.1', 6000))
         print 'connection accepted'
+        print 'Esperando identificacion'
+        self.my_name = self.conn.recv()
         self.updateEstado() #Utilizar la cola para seguir
 
     def updateEstado(self):
@@ -43,7 +45,6 @@ class VentanaAgar(tk.Frame):
         newTablero = self.conn.recv()
         print newTablero
         self.tablero = json.loads(newTablero.decode('utf-8'))
-        self.my_name = self.tablero['me']
         print 'received message', newTablero
         self.canvas.delete('all')
         for key, val in self.tablero.iteritems():
@@ -63,8 +64,6 @@ class VentanaAgar(tk.Frame):
     def cerrarJuego(self):
         print 'mandando mensaje de cerrar'
         self.conn.send('cerrando')
-        a = self.conn.recv()
-        print a
         sys.exit()
         
             
@@ -79,11 +78,3 @@ if __name__=="__main__":
     root = tk.Tk()
     VentanaAgar(root, tablero).pack(side="top", fill="both", expand=True)
     root.mainloop()
-
-    while True:
-        print 'Esperando un mensaje'
-        answer = conn.recv()
-        print 'received message', answer
-        
-        print 'sending message'
-        conn.send(message)

@@ -12,15 +12,15 @@ import json
 
 #Ser
 
-def serve_client(conn, id, tablero, usuarios, lock):
+def serve_client(conn, id, tablero, lock):
     process_name = multiprocessing.current_process().name
-    print tablero
     
     while True:
         try:
             lock.acquire()
             tablero['me'] = process_name
             lock.release()
+            print tablero
             tablero_send = tablero.copy()
             table = json.dumps(tablero_send).encode('utf-8')
             conn.send(table)
@@ -32,6 +32,9 @@ def serve_client(conn, id, tablero, usuarios, lock):
             print 'waiting for message'
             m = conn.recv()
             print 'received message:', m, 'from', id
+            if m=='cerrando':
+                conn.send('cerrando')
+                break
             lock.acquire()
             tablero[m[0]] = m[1:]
             lock.release()
@@ -41,11 +44,9 @@ def serve_client(conn, id, tablero, usuarios, lock):
                 
     conn.close()
     lock.acquire()
-    del usuarios[process_name]
     del tablero[process_name]
     lock.release()
     print 'connection ', id, ' closed'
-    print usuarios
     
         
 
@@ -57,21 +58,20 @@ if __name__=="__main__":
     lock = Lock()
     manager = Manager()    
     tablero=manager.dict()
-    usuarios=manager.dict()
+
     
     while True:
         print 'accepting conexions'
         try:
             conn = listener.accept()
             print 'connection accepted from', listener.last_accepted
-            p = Process(target=serve_client, args=(conn, listener.last_accepted, tablero, usuarios, lock))
+            p = Process(target=serve_client, args=(conn, listener.last_accepted, tablero, lock))
             p.start()
             
             print p.name
             
             lock.acquire()
-            usuarios[p.name] = listener.last_accepted
-            tablero[p.name] = [p.name, 200, 200, 20]
+            tablero[p.name] = [200, 200, 20]
             lock.release()
             
             print tablero

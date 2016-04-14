@@ -3,6 +3,7 @@ import multiprocessing
 from multiprocessing import Lock, Process, Manager
 from multiprocessing.connection import Listener
 from multiprocessing.connection import AuthenticationError
+import json
 
 
 ###Definir el formato de la lista 'estadoDeJuego'
@@ -11,18 +12,24 @@ from multiprocessing.connection import AuthenticationError
 
 #Ser
 
-def serve_client(conn, id, usuarios, tablero, lock):
+def serve_client(conn, id, tablero, usuarios, lock):
     process_name = multiprocessing.current_process().name
     print tablero
     
     while True:
         try:
-            conn.send(tablero)
+            lock.acquire()
+            tablero['me'] = process_name
+            lock.release()
+            tablero_send = tablero.copy()
+            table = json.dumps(tablero_send).encode('utf-8')
+            conn.send(table)
         except IOError:
             print 'No send, connection abruptly closed by client'
             break
         
         try:
+            print 'waiting for message'
             m = conn.recv()
             print 'received message:', m, 'from', id
             lock.acquire()
@@ -67,7 +74,7 @@ if __name__=="__main__":
             tablero[p.name] = [p.name, 200, 200, 20]
             lock.release()
             
-            print usuarios
+            print tablero
         except AuthenticationError:
             print 'connection refused'
             

@@ -9,6 +9,7 @@ elif version_info.major == 3:
     import tkinter as tk
 from multiprocessing.connection import Client
 from multiprocessing import Queue
+import json
 
 #Custom imports
 print 'trying to connect'
@@ -17,6 +18,8 @@ class VentanaAgar(tk.Frame):
     def __init__(self, parent, tablero, conn, *args, **kwargs):
         self.tablero = tablero
         self.conn = conn
+        self.mouse_x = 50
+        self.mouse_y = 50
         
         self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
@@ -27,23 +30,30 @@ class VentanaAgar(tk.Frame):
         self.boton = tk.Button(self.frame, text="Iniciar juego")
         self.boton.pack()
         
-        self.frame.bind('<Motion>', self.updateTablero)
+        self.canvas.bind('<Motion>', self.updateTablero)
         
         self.updateEstado() #Utilizar la cola para seguir
 
     def updateEstado(self):
         print 'Esperando un mensaje'
         newTablero = conn.recv()
-        self.tablero = newTablero
+        self.tablero = json.loads(newTablero.decode('utf-8'))
+        self.my_name = self.tablero['me']
         print 'received message', newTablero
-        for key, val in self.tablero:
-            x = val[1]
-            y = val[2]
-            r = val[3]
-            self.canvas.create_oval(x-r, y-r, x+r, y+r,fill="white")
+        for key, val in self.tablero.items():
+            if key != 'me':
+                print key, val
+                x = val[1]
+                y = val[2]
+                r = val[3]
+                self.canvas.create_oval(x-r, y-r, x+r, y+r,fill="white")
+        self.conn.send([self.my_name, self.mouse_x, self.mouse_y, 20])
+        self.after(100, self.updateEstado)
             
     def updateTablero(self, event):
-        pass
+        self.mouse_x = event.x
+        self.mouse_y = event.y
+        
             
         
         
@@ -56,6 +66,7 @@ if __name__=="__main__":
     
     root = tk.Tk()
     VentanaAgar(root, tablero, conn).pack(side="top", fill="both", expand=True)
+    root.mainloop()
 
     while True:
         print 'Esperando un mensaje'

@@ -34,9 +34,7 @@ def serve_client(conn, id, tablero, lock):
             print 'received message:', m, 'from', id
             if m=='cerrando':
                 break
-            lock.acquire()
-            tablero[m[0]] = m[1:]
-            lock.release()
+            updateTablero(tablero, lock, process_name, m[1], m[2], m[3], 'white')
         except EOFError:
             print 'No recieve, connection abruptly closed by client'
             break
@@ -49,8 +47,8 @@ def serve_client(conn, id, tablero, lock):
     
 def governor(id, tablero, lock):
     process_name = multiprocessing.current_process().name
-    desired_num_bolas = 20
-    point_size = 10
+    desired_num_bolas = 50
+    point_size = 4
     bola_idx = 0      
     
     while True:
@@ -61,7 +59,7 @@ def governor(id, tablero, lock):
             coord_x = random.randint(10,790)
             coord_y = random.randint(10,790)
             
-            color = 
+            color = 'red'
             
             updateTablero(tablero, lock, bola_idx, coord_x, coord_y, point_size, color)
             
@@ -103,7 +101,7 @@ if __name__=="__main__":
             print p.name
             
             lock.acquire()
-            tablero[p.name] = [200, 200, 20]
+            tablero[p.name] = [(200, 200), 20, 'white']
             lock.release()
             
             print tablero

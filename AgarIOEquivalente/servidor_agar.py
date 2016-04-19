@@ -3,6 +3,7 @@ import multiprocessing
 from multiprocessing import Lock, Process, Manager
 from multiprocessing.connection import Listener
 from multiprocessing.connection import AuthenticationError
+import numpy
 import json
 import random
 import time
@@ -21,6 +22,8 @@ def serve_client(conn, id, tableros, lock):
     
     tablero_bolas = tableros[0]
     
+    inertia_factor = float(30)
+    
     while True:
         try:
             print tableros
@@ -37,7 +40,28 @@ def serve_client(conn, id, tableros, lock):
             print 'received message:', m, 'from', id
             if m=='cerrando':
                 break
-            updateTablero(tablero_bolas, lock, process_name, m[0][0], m[0][1], m[1], 'white')
+            x_pos_raton = m[0][0]
+            y_pos_raton = m[0][1]
+            
+            x_pos_bola = tablero_bolas[process_name][0][0]
+            y_pos_bola = tablero_bolas[process_name][0][1]
+            
+            x_dist = x_pos_raton - x_pos_bola
+            y_dist = y_pos_raton - y_pos_bola
+            
+            mag = (x_dist**2 * y_dist**2)**(1/2)
+            
+            updated_pos_x = x_pos_bola + mag * x_dist / (inertia_factor)
+            updated_pos_y = y_pos_bola + mag * y_dist / (inertia_factor)
+            
+            speed = ((updated_pos_x - x_pos_bola)**2 + (updated_pos_y - y_pos_bola)**2)**(1/2)
+            max_speed = 100 / m[1]
+            
+            if speed > max_speed:
+                print 'at max speed'
+                updated_pos_x = x_pos_bola + max_speed
+            
+            updateTablero(tablero_bolas, lock, process_name, updated_pos_x, updated_pos_y, m[1], 'white')
         except EOFError:
             print 'No recieve, connection abruptly closed by client'
             break
@@ -62,7 +86,7 @@ def governor(id, tableros, lock):
     
     while True:
         count_alimentos=len(tablero_alimentos)
-        count_virus = len(tablero_alimentos)
+        count_virus = len(tablero_virus)
         
         if count_alimentos < desired_num_alimentos:
             print count_alimentos

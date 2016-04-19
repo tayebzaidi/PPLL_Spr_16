@@ -43,18 +43,15 @@ class VentanaAgar(tk.Frame):
     def updateEstado(self):
         print 'Esperando un mensaje'
         newTableros = self.conn.recv()
-        print newTableros
         self.tableros = json.loads(newTableros.decode('utf-8'))
         print 'received message', newTableros
         self.canvas.delete('all')
         for tablero in self.tableros:
             for key, val in tablero.iteritems():
-                print val
                 x = val[0][0]
                 y = val[0][1]
                 r = val[1]
                 color = val[2]
-                print x,y,r
                 self.canvas.create_oval(x-r, y-r, x+r, y+r,fill=color)
         self.conn.send([(self.mouse_x, self.mouse_y), 20])
         self.after(10, self.updateEstado)

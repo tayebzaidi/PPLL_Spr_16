@@ -15,8 +15,8 @@ import sys
 print 'trying to connect'
 
 class VentanaAgar(tk.Frame):
-    def __init__(self, parent, tablero,*args, **kwargs):
-        self.tablero = tablero
+    def __init__(self, parent, tableros,*args, **kwargs):
+        self.tableros = tableros
         self.mouse_x = 50
         self.mouse_y = 50
         
@@ -38,29 +38,34 @@ class VentanaAgar(tk.Frame):
         print 'connection accepted'
         print 'Esperando identificacion'
         self.my_name = self.conn.recv()
-        self.updateEstado() #Utilizar la cola para seguir
+        self.updateEstado() 
 
     def updateEstado(self):
         print 'Esperando un mensaje'
-        newTablero = self.conn.recv()
-        print newTablero
-        self.tablero = json.loads(newTablero.decode('utf-8'))
-        print 'received message', newTablero
+        newTableros = self.conn.recv()
+        print newTableros
+        self.tableros = json.loads(newTableros.decode('utf-8'))
+        print 'received message', newTableros
         self.canvas.delete('all')
-        for key, val in self.tablero.iteritems():
-            print val
-            x = val[0][0]
-            y = val[0][1]
-            r = val[1]
-            color = val[2]
-            print x,y,r
-            self.canvas.create_oval(x-r, y-r, x+r, y+r,fill=color)
-        self.conn.send([self.my_name, self.mouse_x, self.mouse_y, 20])
+        for tablero in self.tableros:
+            for key, val in tablero.iteritems():
+                print val
+                x = val[0][0]
+                y = val[0][1]
+                r = val[1]
+                color = val[2]
+                print x,y,r
+                self.canvas.create_oval(x-r, y-r, x+r, y+r,fill=color)
+        self.conn.send([(self.mouse_x, self.mouse_y), 20])
         self.after(10, self.updateEstado)
             
     def updateTablero(self, event):
         self.mouse_x = event.x
         self.mouse_y = event.y
+
+        #(x,y), r, color = self.tablero[self.my_name]
+
+        #self.x_y_vec = (self.mouse_x - x, self.mouse_y - y)
         
     def cerrarJuego(self):
         print 'mandando mensaje de cerrar'
@@ -74,8 +79,8 @@ class VentanaAgar(tk.Frame):
 if __name__=="__main__":
     
     
-    tablero = {}
+    tableros = [{},{},{}]
     
     root = tk.Tk()
-    VentanaAgar(root, tablero).pack(side="top", fill="both", expand=True)
+    VentanaAgar(root, tableros).pack(side="top", fill="both", expand=True)
     root.mainloop()

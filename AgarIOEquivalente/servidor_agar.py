@@ -15,21 +15,25 @@ import time
 
 #Ser
 
-def serve_client(conn, id, tableros, lock):
-    process_name = multiprocessing.current_process().name
+def serve_client(conn, ident, tableros, lock):
+    nombre = conn.recv()
     
-    conn.send(process_name) #Para identificacion
+    if(nombre != ''):
+        pass
+    else:
+        nombre='Anon'
     
     tablero_bolas = tableros[0]
     
     inertia_factor = float(30)
     
+    print ident, type(ident)
+    
     while True:
         try:
             print tableros
             tableros_send = [tab.copy() for tab in tableros]
-            table = json.dumps(tableros_send).encode('utf-8')
-            conn.send(table)
+            conn.send(tableros_send)
         except IOError:
             print 'No send, connection abruptly closed by client'
             break
@@ -37,14 +41,16 @@ def serve_client(conn, id, tableros, lock):
         try:
             print 'waiting for message'
             m = conn.recv()
-            print 'received message:', m, 'from', id
+            print 'received message:', m, 'from', ident
             if m=='cerrando':
                 break
-            x_pos_raton = m[0][0]
-            y_pos_raton = m[0][1]
+            x_pos_raton = m[0]
+            y_pos_raton = m[1]
             
-            x_pos_bola = tablero_bolas[process_name][0][0]
-            y_pos_bola = tablero_bolas[process_name][0][1]
+            x_pos_bola = tablero_bolas[ident][0][0]
+            y_pos_bola = tablero_bolas[ident][0][1]
+            
+            size = tablero_bolas[ident][1]
             
             x_dist = x_pos_raton - x_pos_bola
             y_dist = y_pos_raton - y_pos_bola
@@ -55,26 +61,25 @@ def serve_client(conn, id, tableros, lock):
             updated_pos_y = y_pos_bola + mag * y_dist / (inertia_factor)
             
             speed = ((updated_pos_x - x_pos_bola)**2 + (updated_pos_y - y_pos_bola)**2)**(1/2)
-            max_speed = 100 / m[1]
+            max_speed = 100 / size
             
             if speed > max_speed:
                 print 'at max speed'
                 updated_pos_x = x_pos_bola + max_speed
             
-            updateTablero(tablero_bolas, lock, process_name, updated_pos_x, updated_pos_y, m[1], 'white')
+            updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, size, '#FFFFFF', nombre)
         except EOFError:
             print 'No recieve, connection abruptly closed by client'
             break
                 
     conn.close()
     lock.acquire()
-    del tableros[0][process_name]
+    del tableros[0][ident]
     lock.release()
-    print 'connection ', id, ' closed'
+    print 'connection ', ident, ' closed'
     
 def governor(id, tableros, lock):
     print 'Governor starting'
-    process_name = multiprocessing.current_process().name
     desired_num_alimentos = 50
     desired_num_virus = 10
     alimento_point_size = 4
@@ -95,7 +100,7 @@ def governor(id, tableros, lock):
             
             color = 'red'
             
-            updateTablero(tablero_alimentos, lock, alimento_idx, coord_x, coord_y, alimento_point_size, color)
+            updateAlimento(tablero_alimentos, lock, alimento_idx, coord_x, coord_y, color)
             
             alimento_idx += 1
 
@@ -106,7 +111,7 @@ def governor(id, tableros, lock):
 
             color = 'green'
 
-            updateTablero(tablero_virus, lock, virus_idx, coord_x, coord_y, virus_point_size, color)
+            updateVirus(tablero_virus, lock, virus_idx, coord_x, coord_y, virus_point_size, color)
             virus_idx += 1
             
         time.sleep(random.random())
@@ -114,9 +119,19 @@ def governor(id, tableros, lock):
     conn.close()
     print 'connection ', id, ' closed'
     
-def updateTablero(tablero, lock, name, coord_x, coord_y, point_size, color):
+def updateBola(tablero, lock, ident, coord_x, coord_y, point_size, color, nombre):
     lock.acquire()
-    tablero[name] = [(coord_x, coord_y), point_size, color]
+    tablero[ident] = [(coord_x, coord_y), point_size, color, nombre]
+    lock.release()
+    
+def updateAlimento(tablero, lock, ident, coord_x, coord_y,  color):
+    lock.acquire()
+    tablero[ident] = [(coord_x, coord_y), color]
+    lock.release()
+    
+def updateVirus(tablero, lock, ident, coord_x, coord_y, point_size, color):
+    lock.acquire()
+    tablero[ident] = [(coord_x, coord_y), point_size, color]
     lock.release()
 
 if __name__=="__main__":
@@ -145,13 +160,15 @@ if __name__=="__main__":
         try:
             conn = listener.accept()
             print 'connection accepted from', listener.last_accepted
-            p = Process(target=serve_client, args=(conn, listener.last_accepted, tableros, lock))
+            ident = listener.last_accepted[1]
+            conn.send(listener.last_accepted)
+            p = Process(target=serve_client, args=(conn, ident, tableros, lock))
             p.start()
             
             print p.name
             
             lock.acquire()
-            tableros[0][p.name] = [(200, 200), 20, 'white']
+            tableros[0][ident] = [(200, 200), 20, '#FFFFFF', '']
             lock.release()
             
             print tableros

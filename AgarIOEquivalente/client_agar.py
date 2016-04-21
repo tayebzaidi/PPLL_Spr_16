@@ -15,8 +15,9 @@ import sys
 print 'trying to connect'
 
 class VentanaAgar(tk.Frame):
-    def __init__(self, parent, tableros,*args, **kwargs):
-        self.tableros = tableros
+    def __init__(self, parent, *args, **kwargs):
+        self.tableros = [{},{},{}]
+        self.alimento_sz = 4
         self.mouse_x = 50
         self.mouse_y = 50
         
@@ -36,24 +37,58 @@ class VentanaAgar(tk.Frame):
     def iniciarJuego(self):
         self.conn = Client(address=('127.0.0.1', 6000))
         print 'connection accepted'
-        print 'Esperando identificacion'
-        self.my_name = self.conn.recv()
+        
+        print 'Esperando identificacion'        
+        (_, self.my_name) = self.conn.recv()
+        
+        self.t = tk.Toplevel(self)
+        self.t.wm_title("Entrar tu nombre")
+
+        self.submit = tk.Button(self.t, text="Submit", command= lambda: self.termIniciar(self.E1.get()))
+        self.submit.pack()       
+        
+        self.l = tk.Label(self.t, text="This is window")
+        self.l.pack()
+
+        self.E1 = tk.Entry(self.t, bd=5)
+        self.E1.pack()        
+        print self.E1.get()
+        
+        
+    def termIniciar(self, nombre):
+        self.t.destroy()        
+        
+        self.conn.send(nombre)
+
         self.updateEstado() 
 
     def updateEstado(self):
         print 'Esperando un mensaje'
         newTableros = self.conn.recv()
-        self.tableros = json.loads(newTableros.decode('utf-8'))
+        self.tableros = newTableros
         print 'received message', newTableros
         self.canvas.delete('all')
-        for tablero in self.tableros:
-            for key, val in tablero.iteritems():
-                x = val[0][0]
-                y = val[0][1]
-                r = val[1]
-                color = val[2]
-                self.canvas.create_oval(x-r, y-r, x+r, y+r,fill=color)
-        self.conn.send([(self.mouse_x, self.mouse_y), 20])
+        for key, val in self.tableros[0].iteritems():
+            x = val[0][0]
+            y = val[0][1]
+            r = val[1]
+            color = val[2]
+            nombre = val[3]
+            self.canvas.create_oval(x-r, y-r, x+r, y+r,fill=color)
+            self.canvas.create_text(x,y,text=nombre)
+        for key, val in self.tableros[1].iteritems():
+            x = val[0][0]
+            y = val[0][1] 
+            color = val[1]
+            self.canvas.create_oval(x-self.alimento_sz, y-self.alimento_sz, x+self.alimento_sz, y+self.alimento_sz,fill=color)
+            
+        for key, val in self.tableros[2].iteritems():
+            x = val[0][0]
+            y = val[0][1]
+            r = val[1]
+            color = val[2]
+            self.canvas.create_oval(x-r, y-r, x+r, y+r,fill=color)
+        self.conn.send([self.mouse_x, self.mouse_y])
         self.after(10, self.updateEstado)
             
     def updateTablero(self, event):
@@ -75,9 +110,6 @@ class VentanaAgar(tk.Frame):
 
 if __name__=="__main__":
     
-    
-    tableros = [{},{},{}]
-    
     root = tk.Tk()
-    VentanaAgar(root, tableros).pack(side="top", fill="both", expand=True)
+    VentanaAgar(root).pack(side="top", fill="both", expand=True)
     root.mainloop()

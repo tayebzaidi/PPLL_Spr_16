@@ -35,12 +35,7 @@ class VentanaAgar(tk.Frame):
         self.canvas.bind('<Motion>', self.updateTablero)
         
     def iniciarJuego(self):
-        self.conn = Client(address=('127.0.0.1', 6000))
-        print 'connection accepted'
-        
-        print 'Esperando identificacion'        
-        (_, self.my_name) = self.conn.recv()
-        
+
         self.t = tk.Toplevel(self)
         self.t.wm_title("Entrar tu nombre")
 
@@ -57,6 +52,12 @@ class VentanaAgar(tk.Frame):
         
     def termIniciar(self, nombre):
         self.t.destroy()        
+        
+        self.conn = Client(address=('127.0.0.1', 6000))
+        print 'connection accepted'
+        
+        print 'Esperando identificacion'        
+        (_, self.my_name) = self.conn.recv()
         
         self.conn.send(nombre)
 

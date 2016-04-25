@@ -69,10 +69,9 @@ def serve_client(conn, ident, tableros, lock):
                         temp_color_alimento = val[1]
                         tableros_send[2][key] = [(new_coord_x, new_coord_y), temp_color_alimento]
                     if i == 2:
-                        temp_radius_virus = val[1]
-                        temp_color_virus = val[2]
-                        tableros_send[3][key] = [(new_coord_x, new_coord_y), temp_radius_virus, temp_color_virus]  
-   
+                        temp_color_virus = val[1]
+                        tableros_send[3][key] = [(new_coord_x, new_coord_y), temp_color_virus]  
+            print tableros_send
             conn.send(tableros_send)
         except IOError:
             print 'No send, connection abruptly closed by client'
@@ -173,7 +172,10 @@ def serve_client(conn, ident, tableros, lock):
                     
                     
     
-    deleteEntry(tablero_bolas, lock, ident)                    
+    try:
+        deleteEntry(tablero_bolas, lock, ident)
+    except KeyError:
+        print 'already deleted entry'                    
     conn.close()
     print 'connection ', ident, ' closed'
     
@@ -182,7 +184,7 @@ def governor(id, tableros, lock):
     desired_num_alimentos = 100
     desired_num_virus = 30
     alimento_point_size = 2
-    virus_point_size = 15
+
     alimento_idx = 0     
     virus_idx = 0 
     
@@ -210,10 +212,10 @@ def governor(id, tableros, lock):
 
             color = 'green'
 
-            updateVirus(tablero_virus, lock, virus_idx, coord_x, coord_y, virus_point_size, color)
+            updateVirus(tablero_virus, lock, virus_idx, coord_x, coord_y, color)
             virus_idx += 1
             
-        time.sleep(random.random() / 100)
+        time.sleep(random.random() / 50)
 
     conn.close()
     print 'connection ', id, ' closed'
@@ -228,9 +230,9 @@ def updateAlimento(tablero, lock, ident, coord_x, coord_y,  color):
     tablero[ident] = [(coord_x, coord_y), color]
     lock.release()
     
-def updateVirus(tablero, lock, ident, coord_x, coord_y, point_size, color):
+def updateVirus(tablero, lock, ident, coord_x, coord_y, color):
     lock.acquire()
-    tablero[ident] = [(coord_x, coord_y), point_size, color]
+    tablero[ident] = [(coord_x, coord_y),  color]
     lock.release()
     
 def deleteEntry(tablero, lock, ident):
@@ -240,7 +242,7 @@ def deleteEntry(tablero, lock, ident):
 
 if __name__=="__main__":
 
-    listener = Listener(address=('127.0.0.1', 6000))
+    listener = Listener(address=('147.96.18.24', 6000), authkey='secret password')
     print("listener starting")
     
     lock = Lock()

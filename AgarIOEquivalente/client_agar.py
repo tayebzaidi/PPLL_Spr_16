@@ -18,6 +18,7 @@ class VentanaAgar(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         self.tableros = [{},{},{}]
         self.alimento_sz = 4
+        self.virus_sz = 15
         self.mouse_x = 50
         self.mouse_y = 50
         
@@ -53,7 +54,7 @@ class VentanaAgar(tk.Frame):
     def termIniciar(self, nombre):
         self.t.destroy()        
         
-        self.conn = Client(address=('127.0.0.1', 6000))
+        self.conn = Client(address=('147.96.18.24', 6000), authkey = 'secret password')
         print 'connection accepted'
         
         #print 'Esperando identificacion'        
@@ -87,9 +88,8 @@ class VentanaAgar(tk.Frame):
         for key, val in self.tableros[2].iteritems():
             x = val[0][0]
             y = val[0][1]
-            r = val[1]
-            color = val[2]
-            self.canvas.create_oval(x-r, y-r, x+r, y+r,fill=color)
+            color = val[1]
+            self.canvas.create_oval(x-self.virus_sz, y-self.virus_sz, x+self.virus_sz, y+self.virus_sz,fill=color)
         self.conn.send([self.mouse_x, self.mouse_y])
         self.after(1, self.updateEstado)
             

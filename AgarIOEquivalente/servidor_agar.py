@@ -68,6 +68,8 @@ def serve_client(conn, ident, tableros, lock):
             updated_pos_x = x_pos_bola + mag * x_dist / (inertia_factor)
             updated_pos_y = y_pos_bola + mag * y_dist / (inertia_factor)
             
+            bola_pos = np.array([updated_pos_x, updated_pos_y])
+            
             speed = ((updated_pos_x - x_pos_bola)**2 + (updated_pos_y - y_pos_bola)**2)**(1/2)
             
             
@@ -83,13 +85,13 @@ def serve_client(conn, ident, tableros, lock):
         #Probar para ver si ha comido o ha sido comido
     
         try:
+            alcance_bola = 10
+            def alcance_de_bola(m1, m2):
+                pass
             for key, val in tablero_bolas.items():
                 otra_bola_x = val[0][0]
                 otra_bola_y = val[0][1]
                 mass_otra_bola = val[1]**2 * math.pi
-                alcance_bola = 10
-                def alcance_de_bola(m1, m2):
-                    pass
                 #Still need to implement range
                 if (otra_bola_x - alcance_bola <= updated_pos_x <= otra_bola_x + alcance_bola and 
                     otra_bola_y - alcance_bola <= updated_pos_y <= otra_bola_y + alcance_bola and key != ident):
@@ -111,7 +113,6 @@ def serve_client(conn, ident, tableros, lock):
                 alimento_x = val[0][0]
                 alimento_y = val[0][1]
                 alimento_pos = np.array([val[0][0], val[0][1]])
-                bola_pos = np.array([updated_pos_x, updated_pos_y])
                 #Hay que tener una manera para determinar el alcance
                 dist = np.linalg.norm(alimento_pos - bola_pos) #Un circulo centrado en la bola (alcance)
                 if dist <= radius_bola + alimento_point_size:
@@ -123,11 +124,9 @@ def serve_client(conn, ident, tableros, lock):
         except:
             print 'Fatal error occurred in eating calculations'
             break                        
-                        
+    
+    deleteEntry(tablero_bolas, lock, ident)                    
     conn.close()
-    lock.acquire()
-    del tableros[0][ident]
-    lock.release()
     print 'connection ', ident, ' closed'
     
 def governor(id, tableros, lock):

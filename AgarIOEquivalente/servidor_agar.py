@@ -16,9 +16,16 @@ import time
 
 #Ser
 
+def randcolor():
+    r1 = random.randint(0,255)
+    r2 = random.randint(0,255)
+    r3 = random.randint(0,255)
+    color_string = '#%02X%02X%02X' % (r1,r2,r3)
+    return color_string
+
 def serve_client(conn, ident, tableros, lock):
 
-    color = '#FFFFFF'
+    color_bola = randcolor()
     alimento_point_size = 2
     mass_alimento = alimento_point_size ** 2 * math.pi
     nombre = conn.recv()
@@ -37,7 +44,35 @@ def serve_client(conn, ident, tableros, lock):
     
     while True:
         try:
-            tableros_send = [tab.copy() for tab in tableros]
+            yo = ident
+            tableros_send = [yo, tablero_bolas.copy(), tablero_alimentos.copy(), tablero_virus.copy()]
+            
+            x_pos_bola = tablero_bolas[ident][0][0]
+            y_pos_bola = tablero_bolas[ident][0][1]
+            #Coordinate shifting justo antes de mandarlos
+            temp_tableros = tableros_send[1:]
+            for i in range(len(temp_tableros)):
+                for key, val in temp_tableros[i].items():
+                    coord_x = val[0][0]
+                    coord_y = val[0][1]
+                    
+                    
+                    new_coord_x = coord_x - x_pos_bola + 600
+                    new_coord_y = coord_y - y_pos_bola + 400
+                    
+                    if i == 0:
+                        temp_radius_bola = val[1]
+                        temp_color_bola = val[2]
+                        temp_nombre_bola = val[3]
+                        tableros_send[1][key] = [(new_coord_x, new_coord_y), temp_radius_bola, temp_color_bola, temp_nombre_bola]
+                    if i == 1:
+                        temp_color_alimento = val[1]
+                        tableros_send[2][key] = [(new_coord_x, new_coord_y), temp_color_alimento]
+                    if i == 2:
+                        temp_radius_virus = val[1]
+                        temp_color_virus = val[2]
+                        tableros_send[3][key] = [(new_coord_x, new_coord_y), temp_radius_virus, temp_color_virus]  
+   
             conn.send(tableros_send)
         except IOError:
             print 'No send, connection abruptly closed by client'
@@ -51,8 +86,11 @@ def serve_client(conn, ident, tableros, lock):
             #print 'received message:', m, 'from', ident
             #if m=='cerrando':
             #    break
-            x_pos_raton = m[0]
-            y_pos_raton = m[1]
+            temp_x_pos_raton = m[0]
+            temp_y_pos_raton = m[1]
+            
+            x_pos_raton = temp_x_pos_raton - 600 + x_pos_bola
+            y_pos_raton = temp_y_pos_raton - 400 + y_pos_bola
             
             x_pos_bola = tablero_bolas[ident][0][0]
             y_pos_bola = tablero_bolas[ident][0][1]
@@ -77,21 +115,25 @@ def serve_client(conn, ident, tableros, lock):
             #    print 'at max speed'
             #    updated_pos_x = x_pos_bola + max_speed
             
-            updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, radius_bola, '#FFFFFF', nombre)
+            updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, radius_bola, color_bola, nombre)
         except:
             print 'No recieve, connection abruptly closed by client'
             break
-            
+        
         #Probar para ver si ha comido o ha sido comido
     
         try:
-            alcance_bola = 10
-            def alcance_de_bola(m1, m2):
-                pass
+            alcance_ventana_x = 1100 / 2
+            alcance_ventana_y = 1500 / 2
+            def alcance_de_bola(r1, r2):
+                alcance = r1/3 + r2/3
+                return alcance
+                
             for key, val in tablero_bolas.items():
                 otra_bola_x = val[0][0]
                 otra_bola_y = val[0][1]
                 mass_otra_bola = val[1]**2 * math.pi
+                alcance_bola = alcance_de_bola(val[1], radius_bola)
                 #Still need to implement range
                 if (otra_bola_x - alcance_bola <= updated_pos_x <= otra_bola_x + alcance_bola and 
                     otra_bola_y - alcance_bola <= updated_pos_y <= otra_bola_y + alcance_bola and key != ident):
@@ -106,7 +148,7 @@ def serve_client(conn, ident, tableros, lock):
                         deleteEntry(tablero_bolas, lock, key)
                         new_mass = mass_otra_bola + mass_bola
                         new_radius = math.sqrt(new_mass / math.pi)
-                        updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, new_radius, color, nombre)
+                        updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, new_radius, color_bola, nombre)
                     else:
                         pass
             for key, val in tablero_alimentos.items():
@@ -120,10 +162,16 @@ def serve_client(conn, ident, tableros, lock):
                     new_mass = mass_bola + mass_alimento
                     new_radius = math.sqrt(new_mass / math.pi)
                     deleteEntry(tablero_alimentos, lock, key)
-                    updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, new_radius, color, nombre)
+                    updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, new_radius, color_bola, nombre)
         except:
             print 'Fatal error occurred in eating calculations'
             break                        
+        
+        #Coordinate shifting
+        
+        
+                    
+                    
     
     deleteEntry(tablero_bolas, lock, ident)                    
     conn.close()
@@ -131,8 +179,8 @@ def serve_client(conn, ident, tableros, lock):
     
 def governor(id, tableros, lock):
     print 'Governor starting'
-    desired_num_alimentos = 50
-    desired_num_virus = 10
+    desired_num_alimentos = 100
+    desired_num_virus = 30
     alimento_point_size = 2
     virus_point_size = 15
     alimento_idx = 0     
@@ -146,10 +194,10 @@ def governor(id, tableros, lock):
         
         if count_alimentos < desired_num_alimentos:
             #print count_alimentos
-            coord_x = random.randint(10,790)
-            coord_y = random.randint(10,790)
+            coord_x = random.randint(10,1990)
+            coord_y = random.randint(10,1990)
             
-            color = 'red'
+            color = randcolor()
             
             updateAlimento(tablero_alimentos, lock, alimento_idx, coord_x, coord_y, color)
             
@@ -157,15 +205,15 @@ def governor(id, tableros, lock):
 
         if count_virus < desired_num_virus:
             #print count_virus
-            coord_x = random.randint(10, 790)
-            coord_y = random.randint(10, 790)
+            coord_x = random.randint(10, 1990)
+            coord_y = random.randint(10, 1990)
 
             color = 'green'
 
             updateVirus(tablero_virus, lock, virus_idx, coord_x, coord_y, virus_point_size, color)
             virus_idx += 1
             
-        time.sleep(random.random() / 10)
+        time.sleep(random.random() / 100)
 
     conn.close()
     print 'connection ', id, ' closed'
@@ -217,7 +265,7 @@ if __name__=="__main__":
             conn = listener.accept()
             print 'connection accepted from', listener.last_accepted
             ident = listener.last_accepted[1]
-            conn.send(listener.last_accepted)
+            #conn.send(listener.last_accepted)
             p = Process(target=serve_client, args=(conn, ident, tableros, lock))
             p.start()
             

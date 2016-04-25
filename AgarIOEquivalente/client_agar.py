@@ -24,7 +24,7 @@ class VentanaAgar(tk.Frame):
         self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
         self.parent = parent
 
-        self.canvas = tk.Canvas(self.frame, width=800, height=800)
+        self.canvas = tk.Canvas(self.frame, width=1200, height=800)
         self.canvas.pack()
         
         self.boton_iniciar = tk.Button(self.frame, text="Iniciar juego", command=self.iniciarJuego)
@@ -56,8 +56,8 @@ class VentanaAgar(tk.Frame):
         self.conn = Client(address=('127.0.0.1', 6000))
         print 'connection accepted'
         
-        print 'Esperando identificacion'        
-        (_, self.my_name) = self.conn.recv()
+        #print 'Esperando identificacion'        
+        #(_, self.my_name) = self.conn.recv()
         
         self.conn.send(nombre)
 
@@ -66,8 +66,9 @@ class VentanaAgar(tk.Frame):
     def updateEstado(self):
         print 'Esperando un mensaje'
         newTableros = self.conn.recv()
-        self.tableros = newTableros
+        self.tableros = newTableros[1:]
         print 'received message', newTableros
+        self.my_name = newTableros[0]
         self.canvas.delete('all')
         for key, val in self.tableros[0].iteritems():
             x = val[0][0]
@@ -90,7 +91,7 @@ class VentanaAgar(tk.Frame):
             color = val[2]
             self.canvas.create_oval(x-r, y-r, x+r, y+r,fill=color)
         self.conn.send([self.mouse_x, self.mouse_y])
-        self.after(10, self.updateEstado)
+        self.after(1, self.updateEstado)
             
     def updateTablero(self, event):
         self.mouse_x = event.x

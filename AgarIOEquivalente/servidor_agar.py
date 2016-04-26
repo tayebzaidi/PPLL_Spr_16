@@ -15,6 +15,8 @@ import time
 #Cada espacio en el diccionario tiene una lista con los coordinades
 
 #Ser
+def norm(x, y):
+    return math.sqrt(x**2 + y**2)
 
 def randcolor():
     r1 = random.randint(0,255)
@@ -26,6 +28,8 @@ def randcolor():
 def serve_client(conn, ident, tableros, lock):
 
     color_bola = randcolor()
+    window_limit_x = 2000
+    window_limit_y = 2000
     alimento_point_size = 2
     mass_alimento = alimento_point_size ** 2 * math.pi
     nombre = conn.recv()
@@ -71,9 +75,10 @@ def serve_client(conn, ident, tableros, lock):
                     if i == 2:
                         temp_color_virus = val[1]
                         tableros_send[3][key] = [(new_coord_x, new_coord_y), temp_color_virus]  
-            print tableros_send
+
             conn.send(tableros_send)
-        except IOError:
+        except Exception, e:
+            print str(e)
             print 'No send, connection abruptly closed by client'
             break
         
@@ -82,14 +87,23 @@ def serve_client(conn, ident, tableros, lock):
         try:
             #print 'waiting for message'
             m = conn.recv()
+            
             #print 'received message:', m, 'from', ident
             #if m=='cerrando':
             #    break
             temp_x_pos_raton = m[0]
             temp_y_pos_raton = m[1]
             
-            x_pos_raton = temp_x_pos_raton - 600 + x_pos_bola
-            y_pos_raton = temp_y_pos_raton - 400 + y_pos_bola
+            def speed(mass):
+                velocidad = 4 - mass * 0.001
+                if velocidad < 2.5:
+                    velocid = 2.5
+                return velocidad
+            
+            x_pos_raton = temp_x_pos_raton - 600
+            y_pos_raton = temp_y_pos_raton - 400 
+            
+            raton_pos = [x_pos_raton, y_pos_raton]
             
             x_pos_bola = tablero_bolas[ident][0][0]
             y_pos_bola = tablero_bolas[ident][0][1]
@@ -97,25 +111,29 @@ def serve_client(conn, ident, tableros, lock):
             radius_bola = tablero_bolas[ident][1]
             mass_bola = radius_bola**2 * math.pi
             
-            x_dist = x_pos_raton - x_pos_bola
-            y_dist = y_pos_raton - y_pos_bola
+            if abs(x_pos_raton) < 5 and abs(x_pos_raton) < 5:
+                velocidad = 0
+            else:
+                velocidad = speed(mass_bola)
+            mag = norm(raton_pos[0], raton_pos[1])
+            if mag == 0:
+                print 'mag is zero'
+                mag  = 1
+            x_pos_bola += velocidad * x_pos_raton / mag 
+            y_pos_bola += velocidad * y_pos_raton / mag
             
-            mag = (x_dist**2 * y_dist**2)**(1/2)
+            bola_pos = np.array([x_pos_bola, y_pos_bola])
             
-            updated_pos_x = x_pos_bola + mag * x_dist / (inertia_factor)
-            updated_pos_y = y_pos_bola + mag * y_dist / (inertia_factor)
-            
-            bola_pos = np.array([updated_pos_x, updated_pos_y])
-            
-            speed = ((updated_pos_x - x_pos_bola)**2 + (updated_pos_y - y_pos_bola)**2)**(1/2)
+            speed = ((x_pos_bola - x_pos_bola)**2 + (y_pos_bola - y_pos_bola)**2)**(1/2)
             
             
             #if speed > max_speed:
             #    print 'at max speed'
-            #    updated_pos_x = x_pos_bola + max_speed
+            #    x_pos_bola = x_pos_bola + max_speed
             
-            updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, radius_bola, color_bola, nombre)
-        except:
+            updateBola(tablero_bolas, lock, ident, x_pos_bola, y_pos_bola, radius_bola, color_bola, nombre)
+        except Exception, e:
+            print str(e)
             print 'No recieve, connection abruptly closed by client'
             break
         
@@ -134,20 +152,20 @@ def serve_client(conn, ident, tableros, lock):
                 mass_otra_bola = val[1]**2 * math.pi
                 alcance_bola = alcance_de_bola(val[1], radius_bola)
                 #Still need to implement range
-                if (otra_bola_x - alcance_bola <= updated_pos_x <= otra_bola_x + alcance_bola and 
-                    otra_bola_y - alcance_bola <= updated_pos_y <= otra_bola_y + alcance_bola and key != ident):
+                if (otra_bola_x - alcance_bola <= x_pos_bola <= otra_bola_x + alcance_bola and 
+                    otra_bola_y - alcance_bola <= y_pos_bola <= otra_bola_y + alcance_bola and key != ident):
                     if mass_otra_bola > mass_bola:
                         deleteEntry(tablero_bolas, lock, ident)
                         new_mass = mass_otra_bola + mass_bola
-                        new_radius = math.sqrt(new_mass / math.pi)
+                        radius_otra_bola = math.sqrt(new_mass / math.pi)
                         otra_color = val[2]
                         otra_nombre = val[3]
-                        updateBola(tablero_bolas, lock, key, otra_bola_x, otra_bola_y, new_radius, otra_color, otra_nombre)
+                        updateBola(tablero_bolas, lock, key, otra_bola_x, otra_bola_y, radius_otra_bola, otra_color, otra_nombre)
                     elif mass_otra_bola < mass_bola:
                         deleteEntry(tablero_bolas, lock, key)
                         new_mass = mass_otra_bola + mass_bola
-                        new_radius = math.sqrt(new_mass / math.pi)
-                        updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, new_radius, color_bola, nombre)
+                        radius_bola = math.sqrt(new_mass / math.pi)
+                        updateBola(tablero_bolas, lock, ident, x_pos_bola, y_pos_bola, radius_bola, color_bola, nombre)
                     else:
                         pass
             for key, val in tablero_alimentos.items():
@@ -159,24 +177,90 @@ def serve_client(conn, ident, tableros, lock):
                 if dist <= radius_bola + alimento_point_size:
                     print 'alimento about to be eaten'
                     new_mass = mass_bola + mass_alimento
-                    new_radius = math.sqrt(new_mass / math.pi)
+                    radius_bola = math.sqrt(new_mass / math.pi)
                     deleteEntry(tablero_alimentos, lock, key)
-                    updateBola(tablero_bolas, lock, ident, updated_pos_x, updated_pos_y, new_radius, color_bola, nombre)
-        except:
+                    updateBola(tablero_bolas, lock, ident, x_pos_bola, y_pos_bola, radius_bola, color_bola, nombre)
+                    
+            #Border check
+            if x_pos_bola <= 0:
+                x_pos_bola = 0
+            elif x_pos_bola >= window_limit_x:
+                x_pos_bola = window_limit_x
+                
+            if y_pos_bola <= 0:
+                y_pos_bola = 0
+            elif y_pos_bola >= window_limit_y:
+                y_pos_bola = window_limit_y
+                
+            updateBola(tablero_bolas, lock, ident, x_pos_bola, y_pos_bola, radius_bola, color_bola, nombre)
+                            
+        except Exception, e:
+            print str(e)
             print 'Fatal error occurred in eating calculations'
             break                        
-        
-        #Coordinate shifting
-        
-        
-                    
-                    
     
+    print 'spectating now'
+        
+    while True:
+        try:
+            randkey
+        except Exception, e:
+            randkey = random.choice(tablero_bolas.keys())
+            print str(e)
+        
+        try:
+            randkey
+        except Exception, e:
+            print str(e)
+            break
+            
+        try:
+            yo = ident
+            tableros_send = [yo, tablero_bolas.copy(), tablero_alimentos.copy(), tablero_virus.copy()]
+            
+            x_pos_bola = tablero_bolas[randkey][0][0]
+            y_pos_bola = tablero_bolas[randkey][0][1]
+            #Coordinate shifting justo antes de mandarlos
+            temp_tableros = tableros_send[1:]
+            for i in range(len(temp_tableros)):
+                for key, val in temp_tableros[i].items():
+                    coord_x = val[0][0]
+                    coord_y = val[0][1]
+                    
+                    new_coord_x = coord_x - x_pos_bola + 600
+                    new_coord_y = coord_y - y_pos_bola + 400
+                    
+                    if i == 0:
+                        temp_radius_bola = val[1]
+                        temp_color_bola = val[2]
+                        temp_nombre_bola = val[3]
+                        tableros_send[1][key] = [(new_coord_x, new_coord_y), temp_radius_bola, temp_color_bola, temp_nombre_bola]
+                    if i == 1:
+                        temp_color_alimento = val[1]
+                        tableros_send[2][key] = [(new_coord_x, new_coord_y), temp_color_alimento]
+                    if i == 2:
+                        temp_color_virus = val[1]
+                        tableros_send[3][key] = [(new_coord_x, new_coord_y), temp_color_virus]
+            print 'sending tablero to ', randkey  
+            conn.send(tableros_send)
+        
+        except Exception, e:
+            print str(e)
+            print 'spectating failed, trying with new entry'
+            break
+            
+        try:
+            #print 'waiting for message'
+            m = conn.recv()
+        except Exception, e:
+            print str(e)
+            print 'spectating failed on receive end'
+            
     try:
+        test = tablero_bolas[ident]
         deleteEntry(tablero_bolas, lock, ident)
-    except KeyError:
-        print 'already deleted entry'                    
-    conn.close()
+    except:
+        print 'already deleted'
     print 'connection ', ident, ' closed'
     
 def governor(id, tableros, lock):
@@ -242,7 +326,7 @@ def deleteEntry(tablero, lock, ident):
 
 if __name__=="__main__":
 
-    listener = Listener(address=('147.96.18.24', 6000), authkey='secret password')
+    listener = Listener(address=('127.0.0.1', 6000), authkey='secret password')
     print("listener starting")
     
     lock = Lock()

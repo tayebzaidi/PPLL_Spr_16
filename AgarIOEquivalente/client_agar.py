@@ -54,7 +54,7 @@ class VentanaAgar(tk.Frame):
     def termIniciar(self, nombre):
         self.t.destroy()        
         
-        self.conn = Client(address=('147.96.18.24', 6000), authkey = 'secret password')
+        self.conn = Client(address=('127.0.0.1', 6000), authkey = 'secret password')
         print 'connection accepted'
         
         #print 'Esperando identificacion'        
@@ -65,10 +65,9 @@ class VentanaAgar(tk.Frame):
         self.updateEstado() 
 
     def updateEstado(self):
-        print 'Esperando un mensaje'
         newTableros = self.conn.recv()
         self.tableros = newTableros[1:]
-        print 'received message', newTableros
+        #print 'received message', newTableros
         self.my_name = newTableros[0]
         self.canvas.delete('all')
         for key, val in self.tableros[0].iteritems():
@@ -91,7 +90,7 @@ class VentanaAgar(tk.Frame):
             color = val[1]
             self.canvas.create_oval(x-self.virus_sz, y-self.virus_sz, x+self.virus_sz, y+self.virus_sz,fill=color)
         self.conn.send([self.mouse_x, self.mouse_y])
-        self.after(1, self.updateEstado)
+        self.after(5, self.updateEstado)
             
     def updateTablero(self, event):
         self.mouse_x = event.x
@@ -102,8 +101,7 @@ class VentanaAgar(tk.Frame):
         #self.x_y_vec = (self.mouse_x - x, self.mouse_y - y)
         
     def cerrarJuego(self):
-        print 'mandando mensaje de cerrar'
-        self.conn.send('cerrando')
+        
         sys.exit()
         
             

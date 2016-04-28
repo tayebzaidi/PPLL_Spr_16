@@ -54,7 +54,7 @@ class VentanaAgar(tk.Frame):
     def termIniciar(self, nombre):
         self.t.destroy()        
         
-        self.conn = Client(address=('127.0.0.1', 6000), authkey = 'secret password')
+        self.conn = Client(address=('147.96.18.196', 6000), authkey = 'secret password')
         print 'connection accepted'
         
         #print 'Esperando identificacion'        
@@ -65,7 +65,9 @@ class VentanaAgar(tk.Frame):
         self.updateEstado() 
 
     def updateEstado(self):
+        print 'Esperando un mensaje'
         newTableros = self.conn.recv()
+        print 'message received'
         self.tableros = newTableros[1:]
         #print 'received message', newTableros
         self.my_name = newTableros[0]

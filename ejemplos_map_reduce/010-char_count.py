@@ -4,6 +4,7 @@ class MRCharCount(MRJob):
 
     def mapper(self, _, line):
         yield "chars", len(line)
+        
             
     def reducer(self, key, values):
         yield key, sum(values)

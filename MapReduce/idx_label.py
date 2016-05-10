@@ -5,7 +5,7 @@ import string
 class MRIdxLabel(MRJob):
 
     def mapper(self, _, line):
-        line_stripped = line.translate()
+        line_stripped = line.translate(string.maketrans("",""), string.punctuation)
         sentence_total = line_stripped.split()
         line_number = int(sentence_total[0])
         sentence = sentence_total[1:]

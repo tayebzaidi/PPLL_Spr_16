@@ -19,8 +19,8 @@ def f(n):
 #Prueba diferentes valores de K para ver las diferencias en el
 #tiempo de ejecución.
 
-K = 1500
-l = range(4,9)
+K = 2000
+l = range(3,10)
 random.shuffle(l)
 print l
 for i in l:

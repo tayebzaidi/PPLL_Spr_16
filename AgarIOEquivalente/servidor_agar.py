@@ -24,12 +24,42 @@ def randcolor():
     r3 = random.randint(0,255)
     color_string = '#%02X%02X%02X' % (r1,r2,r3)
     return color_string
+    
+def trasladarCoordinadas(tableros, ident, alcance_ventana_x, alcance_ventana_y):
+    
+    x_pos_bola = tableros[1][ident][0][0]
+    y_pos_bola = tableros[1][ident][0][1]
+
+    temp_tableros = tableros[1:]
+    tableros_send = [{},{},{}]
+    for i in range(len(temp_tableros)):
+                for key, val in temp_tableros[i].items():
+                    coord_x = val[0][0]
+                    coord_y = val[0][1]
+                    
+                    new_coord_x = coord_x - x_pos_bola + alcance_ventana_x / 2
+                    new_coord_y = coord_y - y_pos_bola + alcance_ventana_y / 2
+                    
+                    if i == 0:
+                        temp_radius_bola = val[1]
+                        temp_color_bola = val[2]
+                        temp_nombre_bola = val[3]
+                        tableros_send[1][key] = [(new_coord_x, new_coord_y), temp_radius_bola, temp_color_bola, temp_nombre_bola]
+                    if i == 1:
+                        temp_color_alimento = val[1]
+                        tableros_send[2][key] = [(new_coord_x, new_coord_y), temp_color_alimento]
+                    if i == 2:
+                        temp_color_virus = val[1]
+                        tableros_send[3][key] = [(new_coord_x, new_coord_y), temp_color_virus]
+    
+    return tableros_send
 
 def serve_client(conn, ident, tableros, lock):
-
+    alcance_ventana_x = 1200
+    alcance_ventana_y = 800
     color_bola = randcolor()
-    window_limit_x = 2000
-    window_limit_y = 2000
+    game_sz_limit_x = 2000
+    game_sz_limit_y = 2000
     alimento_point_size = 2
     mass_alimento = alimento_point_size ** 2 * math.pi
     nombre = conn.recv()
@@ -51,31 +81,9 @@ def serve_client(conn, ident, tableros, lock):
             yo = ident
             tableros_send = [yo, tablero_bolas.copy(), tablero_alimentos.copy(), tablero_virus.copy()]
             
-            x_pos_bola = tablero_bolas[ident][0][0]
-            y_pos_bola = tablero_bolas[ident][0][1]
             #Coordinate shifting justo antes de mandarlos
-            temp_tableros = tableros_send[1:]
-            for i in range(len(temp_tableros)):
-                for key, val in temp_tableros[i].items():
-                    coord_x = val[0][0]
-                    coord_y = val[0][1]
-                    
-                    
-                    new_coord_x = coord_x - x_pos_bola + 600
-                    new_coord_y = coord_y - y_pos_bola + 400
-                    
-                    if i == 0:
-                        temp_radius_bola = val[1]
-                        temp_color_bola = val[2]
-                        temp_nombre_bola = val[3]
-                        tableros_send[1][key] = [(new_coord_x, new_coord_y), temp_radius_bola, temp_color_bola, temp_nombre_bola]
-                    if i == 1:
-                        temp_color_alimento = val[1]
-                        tableros_send[2][key] = [(new_coord_x, new_coord_y), temp_color_alimento]
-                    if i == 2:
-                        temp_color_virus = val[1]
-                        tableros_send[3][key] = [(new_coord_x, new_coord_y), temp_color_virus]  
-
+            tableros_send = trasladarCoordinadas(tableros_send, ident, alcance_ventana_x, alcance_ventana_y)
+            
             conn.send(tableros_send)
         except Exception, e:
             print str(e)
@@ -126,7 +134,7 @@ def serve_client(conn, ident, tableros, lock):
             
             speed = ((x_pos_bola - x_pos_bola)**2 + (y_pos_bola - y_pos_bola)**2)**(1/2)
             
-            
+            time.sleep(0.01)
             #if speed > max_speed:
             #    print 'at max speed'
             #    x_pos_bola = x_pos_bola + max_speed
@@ -140,8 +148,7 @@ def serve_client(conn, ident, tableros, lock):
         #Probar para ver si ha comido o ha sido comido
     
         try:
-            alcance_ventana_x = 1100 / 2
-            alcance_ventana_y = 1500 / 2
+            
             def alcance_de_bola(r1, r2):
                 alcance = r1/3 + r2/3
                 return alcance
@@ -206,11 +213,14 @@ def serve_client(conn, ident, tableros, lock):
             randkey
         except Exception, e:
             randkey = random.choice(tablero_bolas.keys())
+            print 'getting new key'
+            print randkey
             print str(e)
         
         try:
             randkey
         except Exception, e:
+            print "error not recoverable, can't find randkey"
             print str(e)
             break
             
@@ -241,7 +251,7 @@ def serve_client(conn, ident, tableros, lock):
                     if i == 2:
                         temp_color_virus = val[1]
                         tableros_send[3][key] = [(new_coord_x, new_coord_y), temp_color_virus]
-            print 'sending tablero to ', randkey  
+            #print 'sending tablero to ', randkey  
             conn.send(tableros_send)
         
         except Exception, e:

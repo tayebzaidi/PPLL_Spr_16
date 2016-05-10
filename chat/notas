@@ -1,0 +1,37 @@
+El problema básico para hacer un chat es que los clientes tienen que
+poder recibir mensajes del servidor.
+
+La forma correcta de hacer esto es lanzar un listener en cada cliente.
+
+1. client.py 
+En este programa puede verse como además del trabajo habitual del
+cliente hemos añadido un listener en un proceso aparte. Los mensajes
+del listener de cada cliente comienzan con "................" para
+diferenciarlos fácilmente de los otros mensajes.
+
+Cada cliente envía dos tipos de mensajes al servidor, uno normal
+que no hace esencialmente nada, y el otro que indica que terminamos.
+
+2. listener_multiprocess_notifyclients.py
+Es una variante del listener_multiprocess.py que vimos en el esquema de
+solución del mail. Este servidor tiene que llevar una estructura de 
+datos con los datos de los listener de los clientes para poder enviar
+mensajes a los mismos. Existen otros ficheros con clientes 
+(client2.py, client3.py) con otros puertos y palabras clave asignados.
+
+El servidor cuando le llega un nuevo cliente notifica a los ya existentes
+esta llegada. Si un cliente se va, también se encarga de notificar 
+esto a los clientes restantes.
+
+Prueba:
+-arrancar el servidor 
+-arrancar un cliente
+-arrancar varios clientes y comprobar que llegan los mensajes de "new client"
+-cerrar clientes y comprobar que llegan los mensajes de "quit client"
+
+
+
+
+
+
+

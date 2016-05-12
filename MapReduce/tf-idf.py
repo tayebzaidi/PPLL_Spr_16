@@ -17,45 +17,38 @@ class MRTF_IDF(MRJob):
         line_stripped = line.translate(string.maketrans("",""), string.punctuation)
         sentence = line_stripped.split()
         num_words = len(sentence)
-        yield word, num_words
-        yield '.total_counter.', num_words 
+        for word in sentence:
+            yield (word.lower(), jobconf_from_env('map.input.file')), 1
+        #yield '.total_counter.', num_words
             
-    def reducer(self, fichero, num_words):
-        partial_sum = sum(num_words)
-        self.increment_counter('group', 'total_words', partial_sum)
-        yield None, (fichero, partial_sum)
+    def reducer(self, key, values):
+        N = sum(values)
+        word = key[0]
+        yield word, (key[1], N)
         
-    def filtro(self, _, data):
-        first_value = data.next()
-        assert first_value[0] == '.total_counter.'
-        total = first_value[1]
+    def filtro(self, word, data):
+        ficheros_unique = []
+        term_frec = []
         for fichero, counts in data:
-            yield fichero, counts / float(total)
-        
-    def mapperPorFichero(self, _, line):
-        pass
-        
-    def reducerPorFichero(self, key, values):
-        pass
-    
-    def aggregatorFrequency(self, key, values):
-        pass
+            if fichero not in ficheros_unique:
+                ficheros_unique.append(fichero)
+            term_frec.append((fichero, counts))
+        K = len(ficheros_unique)
+        for (fichero, counts) in term_frec:    
+            yield (word, fichero), (counts, K)
     
     def steps(self):
         return [
             MRStep(mapper = self.mapper,
                     reducer = self.reducer),
             MRStep(reducer = self.filtro),
-            MRStep(mapper = self.mapperPorFichero,
-                    reducer = self.reducerPorFichero),
-            MRStep(reducer + self.aggregatorFrequency)
         ]     
 
 
 if __name__ == '__main__':
     print 'starting mrjob process'
     #....
-    job = MRTF_IDF(args=['El_buscón-Quevedo.txt', 'MadameBovary.txt'])
+    job = MRTF_IDF(args=['a.txt', 'b.txt', 'c.txt'])
     runner = job.make_runner()
     runner.run()
     tmp_output = []
@@ -65,4 +58,5 @@ if __name__ == '__main__':
         tmp_output = tmp_output + [line]
         #...
     print 'Results:', tmp_output
+    print len(tmp_output)
     #...

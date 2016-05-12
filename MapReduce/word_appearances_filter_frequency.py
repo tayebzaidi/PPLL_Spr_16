@@ -12,23 +12,23 @@ import string
 
 
 class MRCharCount(MRJob):
-
+    SORT_VALUES = True
     def mapper(self, _, line):
         stripped = line.translate(string.maketrans("",""), string.punctuation)
         for word in stripped.split():
             yield word.lower(), 1
-        yield '', len(stripped.split())
+        yield '.', len(stripped.split())
                 
     def sum_words(self, word, counts):
         yield None, (word, sum(counts))
         
     
-    def reducer(self, _, (word, values)):
-        if(word == ''):
-            total_word_count = sum(values)
-        else:
-            word_count = sum(values)
-            yield word, word_count / total_word_count
+    def reducer(self, _, data):
+        first = data.next()
+        if(first[0] == '.'):
+            total_word_count = first[1]
+        for word, counts in data:
+            yield word, counts/ float(total_word_count)
 
     def steps(self):
         return [

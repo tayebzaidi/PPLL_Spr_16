@@ -14,7 +14,7 @@ import re
 regex = '(.*?) - - \[(.*?)\] "(.*?)" (\d+)'
 #Time pattern
 pattern = '%d/%b/%Y:%H:%M:%S'
-T = 1800 #30 minutos en segundos
+T = 18 #30 minutos en segundos
 
 class MRLog_Info(MRJob):
     #SORT_VALUES = True
@@ -23,29 +23,39 @@ class MRLog_Info(MRJob):
         data = re.match(regex, line).groups()
         usuario = data[0]
         date = data[1]
-        id = data[2]
+        webpage = data[2]
         date_time = date[:20]
         epoch = time.mktime(time.strptime(date_time, pattern))
-        yield usuario, (epoch, id)
+        yield usuario, (epoch, webpage)
             
     def reducer(self, usuario, data):
-        sesiones = 0 #Offset for first
+        session_count = 0 #Offset for first
         comportamientos = {}
         time_prev = -10000 #Before epoch para que tengamos el principio
         for tiempo, id in data:
+            session_prev = session_count
             if tiempo - time_prev > T:
-                sesiones += 1
-                comportamientos['comportamiento'+str(sesiones)] = set()
+                session_count += 1
+                comportamientos['comportamiento'+str(session_count)] = set()
             time_prev = tiempo
-            comportamientos['comportamiento'+str(sesiones)].add(id)
-        for key, val in comportamientos.iteritems():
-            comportamientos[key] = sorted(list(val))
-        yield usuario, (sesiones, comportamientos) 
+            comportamientos['comportamiento'+str(session_count)].add(id)
+            if session_count - session_prev > 0:
+                for key, val in comportamientos.iteritems():
+                    comportamiento = sorted(list(val))
+                yield (usuario, comportamiento), 1
+        #yield (usuario, '.session_count.'), 1
+                
+    def compara(self, key, count):
+        yield key[0], (key[1], sum(count))
         
-    #def steps(self):
-    #    MRStep(mapper = self.mapper,
-    #            reducer = self.reducer)
-    #    MRStep(self.)
+    def agregar(self, usuario, data):
+        
+        
+        
+    def steps(self):
+        MRStep(mapper = self.mapper,
+                reducer = self.reducer)
+        MRStep(reducer = self.compara)
            
 if __name__ == '__main__':
     MRLog_Info.run()

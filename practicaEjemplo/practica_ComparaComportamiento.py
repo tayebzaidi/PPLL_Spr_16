@@ -29,22 +29,23 @@ class MRLog_Info(MRJob):
         yield usuario, (epoch, webpage)
             
     def reducer(self, usuario, data):
-        sesiones = 0 #Offset for first
+        session_count = 0 #Offset for first
         comportamientos = {}
         time_prev = -10000 #Before epoch para que tengamos el principio
-        for tiempo, id in data:
-            session_prev = sesiones
+        for tiempo, webpage in data:
+            session_prev = session_count
             if tiempo - time_prev > T:
-                sesiones += 1
-                comportamientos['comportamiento'+str(sesiones)] = set()
+                session_count += 1
+                comportamientos['comportamiento'+str(session_count)] = set()
             time_prev = tiempo
-            comportamientos['comportamiento'+str(sesiones)].add(id)
-            if sesiones - count_session > 0:
-                print comportamientos.values
-                yield list(comportamientos.values()), usuario
+            comportamientos['comportamiento'+str(session_count)].add(webpage)
+            if session_count - session_prev > 0:
+                for val in comportamientos.values():
+                    comportamiento = sorted(list(val))
+                    yield comportamiento, usuario
         
     def compara(self, comportamiento, usuarios):
-        user_list = list(usuarios)
+        user_list = list(set(usuarios))
         yield comportamiento, user_list
             
             

@@ -23,36 +23,46 @@ class MRLog_Info(MRJob):
         data = re.match(regex, line).groups()
         usuario = data[0]
         date = data[1]
-        id = data[2]
+        webpage = data[2]
         date_time = date[:20]
         epoch = time.mktime(time.strptime(date_time, pattern))
-        yield usuario, (epoch, id)
+        yield usuario, (epoch, webpage)
             
     def reducer(self, usuario, data):
-        sesiones = 0
-        websites = set()
+        session_count = 0 #Offset for first
+        comportamientos = {}
         time_prev = -10000 #Before epoch para que tengamos el principio
-        for tiempo, id in data:
+        for tiempo, webpage in data:
+            session_prev = session_count
             if tiempo - time_prev > T:
-                sesiones += 1
+                session_count += 1
+                comportamientos['comportamiento'+str(session_count)] = set()
             time_prev = tiempo
-            websites.add(id)
-        comportamiento = list(websitesSorted))
-        yield comportamiento, (usuario, comportamiento, sesiones) 
+            comportamientos['comportamiento'+str(session_count)].add(webpage)
+            if session_count - session_prev > 0:
+                for key, val in comportamientos.iteritems():
+                    comportamiento = sorted(list(val))
+                    comportamientos[key] = comportamiento
+                    yield comportamiento, (usuario, session_count, comportamientos)
         
-    def compara(self, comportamiento, usuarios):
-        user_list = list(usuarios)
-        for i in range(len(comportamiento)):
+    def compara(self, comportamiento, data):
+        usuario_list = set()
+        for usuario, session_count, comportamientos in data:
+            usuario_list.add(usuario)
             
             pass
-        yield comportamiento, user_list
+        yield usuario, (comportamiento, usuario_list)
+        
+    def agregar(self, usuario, data):
+        pass
             
             
     def steps(self):
         return [
             MRStep(mapper = self.mapper,
                     reducer = self.reducer),
-            MRStep(reducer = self.compara)
+            MRStep(reducer = self.compara),
+            MRStep(reducer = self.agregar)
         ]
         
 if __name__ == '__main__':

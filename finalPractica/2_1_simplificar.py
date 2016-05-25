@@ -18,12 +18,10 @@ class Simplificar(MRJob):
     def reducer(self, key, values):
         aristas = set()
         for val in values:
-            print val
             aristas.add(val)
-        print aristas
         return_aristas = sorted(list(aristas))
         yield return_aristas, 1
         
 if __name__=='__main__':
-    #sys.stderr = open('localerrorlog.txt', 'w')
+    sys.stderr = open('localerrorlog.txt', 'w')
     Simplificar.run()

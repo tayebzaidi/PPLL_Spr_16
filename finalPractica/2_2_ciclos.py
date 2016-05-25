@@ -1,31 +1,33 @@
 from mrjob.job import MRJob
 from mrjob.step import MRStep
 from collections import defaultdict
+import sys
 
-class Grados(MRJob):
+class Ciclos_Paso1(MRJob):
     def mapper(self, _, line):
-        line_split = line.strip('()').split(',') #Strip parenthesis and split by the comma
-        sorted_line = sorted(line_split)
-        node1 = sorted_line[0]
-        node2 = sorted_line[1]
-        if node1 != node2:
-            yield node1, node2
+        if line[0] != '#':
+            line_split = line.strip('()').split(',') #Strip parenthesis and split by the comma
+            sorted_line = sorted(line_split)
+            node1 = sorted_line[0]
+            node2 = sorted_line[1]
+            if node1 != node2:
+                yield node1, node2
         
         
     def reducer(self, key, values):
         nodes = list(values)
-        for node1 in nodes:
-            nodes_sliced = nodes[nodes.index(node1)+1:]
-            for node2 in nodes.remove(node1):
-                nodes.append(node)
-                yield key, (node1, node2)
-        for node in nodes:
-            nodes_temp = list(nodes)
-            nodes_sliced = nodes_temp[nodes_temp.index(node)+1:]
-            yield node, (','.join(nodes_sliced), key)
+        for i in range(len(nodes)):
+            for j in range(i, len(nodes)):
+                if key != '"A"':
+                    print key, i, j   
+                if i != j:
+                    yield (nodes[i], nodes[j]), key
+        
             
+      
+class Ciclos_Paso2(MRJob):
     def ciclos_count(self, key, values):
-        for str_nodes, parent_node
+            pass
     
     def grado_calc(self, key, values):
         grados = defaultdict(int)
@@ -43,7 +45,8 @@ class Grados(MRJob):
         for node in node_connections.keys():
             if len(node_connections[node]) > 1:
                 for node_sub in node_connections[node]:
-                    if node in node_connections[node_sub]
+                    if node in node_connections[node_sub]:
+                        pass
             
     def ciclos_count(self, key, values):
         pass
@@ -57,4 +60,16 @@ class Grados(MRJob):
             
         
 if __name__=='__main__':
-    Grados.run()
+    print 'Starting ciclos1 job'
+    job_ciclos1 = Ciclos_Paso1(args=sys.argv[1:])
+    runner_ciclos1 = job_ciclos1.make_runner()
+    runner_ciclos1.run()
+    ciclos1_output = []
+    for line in runner_ciclos1.stream_output():
+        ciclos1_output = ciclos1_output + [job_ciclos1.parse_output_line(line)]
+    print 'Results ciclos1:', ciclos1_output
+    
+    f = open('results_ciclos1.txt','w')
+    for (node1, node2), parent in ciclos1_output:
+        f.write(node1+'\t'+node2+'\t'+parent+'\n')
+    f.close()

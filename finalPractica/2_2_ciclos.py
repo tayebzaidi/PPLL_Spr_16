@@ -46,7 +46,7 @@ class Ciclos(MRJob):
                     ciclo = [node1,node2,node3]
                     ciclo_sorted = sorted(ciclo)
                     yield ciclo_sorted, None
-                    break
+                    
         
     def steps(self):
         return [

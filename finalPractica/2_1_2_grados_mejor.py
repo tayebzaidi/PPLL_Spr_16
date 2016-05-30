@@ -13,32 +13,43 @@ class Grados(MRJob):
         sorted_line = sorted(line_split)
         node1 = sorted_line[0]
         node2 = sorted_line[1]
-        if node1 != node2:
-            str_node = ','.join([node1, node2])
-            yield str_node, 1
+        if node1 != node2:  #eliminate edges with the same vertice
+            yield (node1, node2), None  #eliminate duplicate nodes
         
         
     def reducer(self, key, values):
-        yield None, key
+        yield key[0], key
+        yield key[1], key
+        
+    def sift(self, key, values):
+        degree = 0
+        send_edges = []
+        for val in values:
+            degree += 1
+            if val not in send_edges:
+                send_edges.append(val)
+        for edge in sorted(send_edges):
+            if key == edge[0]:
+                location = 0
+            elif key == edge[1]:
+                location = 1
+            yield edge, (edge, degree, location)    
+        
     
     def grado_calc(self, key, values):
-        grados = defaultdict(int)
-        node_pairs = []
-        for str_node in values:
-            nodes = str_node.split(',')
-            node1 = nodes[0]
-            node2 = nodes[1]
-            grados[node1] += 1
-            grados[node2] += 1
-            node_pair = [node1, node2]
-            node_pairs.append(node_pair)
-        for node_pair in node_pairs:
-            yield node_pair, (grados[node_pair[0]], grados[node_pair[1]])
+        for edge, degree, location in values:
+            if location == 0:
+                degree0 = degree
+            if location == 1:
+                degree1 = degree
+        yield edge, (degree0, degree1)
+
             
     def steps(self):
         return [
             MRStep(mapper = self.mapper,
                     reducer = self.reducer),
+            MRStep(reducer = self.sift),
             MRStep(reducer = self.grado_calc)
         ]
             
